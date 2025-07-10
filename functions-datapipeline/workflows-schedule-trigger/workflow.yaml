@@ -1,0 +1,99 @@
+# Cloud Workflows - 時系列データ取得処理の定期実行
+# Cloud Run functions を定期的に呼び出してデータを取得する
+main:
+  steps:
+    - initialize:
+        assign:
+          - prefix: ""
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - region: "asia-northeast1"
+          - function_name: ${prefix + "-fetch-timeseries-data"}
+          - function_url: ${"https://" + region + "-" + project_id + ".cloudfunctions.net/" + function_name}
+
+    - log_start:
+        call: sys.log
+        args:
+          data:
+            message: "時系列データ取得ワークフロー開始"
+            function_url: ${function_url}
+            timestamp: ${time.format(sys.now())}
+
+    - call_function:
+        try:
+          call: http.get
+          args:
+            url: ${function_url}
+            timeout: 600
+          result: function_response
+        except:
+          as: e
+          steps:
+            - log_error:
+                call: sys.log
+                args:
+                  data:
+                    message: "Cloud Function呼び出しエラー"
+                    error: ${e}
+
+            - wait_before_retry:
+                call: sys.sleep
+                args:
+                  seconds: 30
+
+            - retry_call_function:
+                try:
+                  call: http.get
+                  args:
+                    url: ${function_url}
+                    timeout: 600
+                  result: function_response
+                except:
+                  as: retry_error
+                  steps:
+                    - log_final_failure:
+                        call: sys.log
+                        args:
+                          data:
+                            message: "リトライ後も失敗しました。処理を終了します。"
+                            error: ${retry_error}
+
+                    - return_failure:
+                        return:
+                          status: "FAILED"
+                          message: "時系列データ取得に失敗しました"
+                          attempts: 2
+                          error: ${retry_error}
+
+    - check_response:
+        switch:
+          - condition: ${function_response.code == 200}
+            steps:
+              - log_success:
+                  call: sys.log
+                  args:
+                    data:
+                      message: "時系列データ取得成功"
+                      status_code: ${function_response.code}
+                      response_summary: ${function_response.body}
+
+              - return_success:
+                  return:
+                    status: "SUCCESS"
+                    message: "時系列データ取得完了"
+                    response: ${function_response.body}
+                    timestamp: ${time.format(sys.now())}
+
+          - condition: true
+            steps:
+              - log_http_error:
+                  call: sys.log
+                  args:
+                    data:
+                      message: "HTTP エラーレスポンス"
+                      status_code: ${function_response.code}
+
+              - return_http_failure:
+                  return:
+                    status: "FAILED"
+                    message: "HTTP エラーのため処理を終了"
+                    status_code: ${function_response.code}

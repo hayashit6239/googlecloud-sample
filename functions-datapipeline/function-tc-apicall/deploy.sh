@@ -3,7 +3,17 @@
 # Cloud Functions デプロイスクリプト
 
 # 変数設定
-FUNCTION_NAME="hayashi-fetch-timeseries-data"
+PREFIX=""
+
+# PREFIXバリデーション
+if [ -z "$PREFIX" ]; then
+    echo "エラー: PREFIX変数が空です。"
+    echo "PREFIX変数にプロジェクト固有の識別子を設定してください。"
+    echo "例: PREFIX=\"hayashi\""
+    exit 1
+fi
+
+FUNCTION_NAME="${PREFIX}-fetch-timeseries-data"
 REGION="asia-northeast1"  # 東京リージョン
 RUNTIME="python311"
 MEMORY="512MB"
