@@ -7,15 +7,35 @@ from src.config import Config
 from src.api_client import TimeSeriesAPIClient
 
 
-# ログ設定
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
-)
+# ログ設定 - Cloud Runの標準出力対応
+def setup_logging():
+    """Cloud Run用のログ設定"""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # 既存のハンドラーをクリア
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # 標準出力ハンドラーを追加
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    
+    # フォーマッター設定
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
+    )
+    stream_handler.setFormatter(formatter)
+    
+    # ルートロガーにハンドラーを追加
+    root_logger.addHandler(stream_handler)
+    
+    # 外部ライブラリのログレベルを調整
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-# 外部ライブラリのログレベルを調整
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
+# ログ設定を実行
+setup_logging()
 
 
 # Cloud Functions Entry Point

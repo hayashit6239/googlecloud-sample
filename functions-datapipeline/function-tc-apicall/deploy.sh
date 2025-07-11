@@ -3,7 +3,7 @@
 # Cloud Functions デプロイスクリプト
 
 # 変数設定
-PREFIX=""
+PREFIX="hayashi"
 
 # PREFIXバリデーション
 if [ -z "$PREFIX" ]; then
@@ -35,7 +35,7 @@ gcloud functions deploy $FUNCTION_NAME \
   --allow-unauthenticated \
   --memory=$MEMORY \
   --timeout=$TIMEOUT \
-  --env-vars-file=.env.local.yaml
+  --env-vars-file=.local.env.yaml
 
 if [ $? -eq 0 ]; then
     echo "=== デプロイ成功 ==="
