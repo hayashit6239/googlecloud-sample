@@ -27,3 +27,7 @@ class Config:
             raise ValueError("AUTHORIZATION環境変数が設定されていません")
         if not self.source:
             raise ValueError("SOURCE環境変数が設定されていません")
+    
+    def get_env_var(self, key: str) -> str:
+        """環境変数を取得"""
+        return os.environ.get(key, "")

@@ -1,23 +1,32 @@
 import datetime
-import requests
 import json
 import logging
+from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Tuple
 
-from .config import Config
-from .models import MeasurementPoint, SensorSchema
+import requests
+
+from ..config import Config
+from ..models import MeasurementPoint, SensorSchema
 
 
-class TimeSeriesAPIClient:
-    """時系列データAPI クライアント"""
+class TimeSeriesRepository(ABC):
+    """時系列データ取得の抽象インターフェース"""
+
+    @abstractmethod
+    def fetch_time_series_data(self) -> Tuple[List[SensorSchema], Dict[str, List[Optional[MeasurementPoint]]]]:
+        """時系列データとスキーマを取得する"""
+        pass
+
+
+class APITimeSeriesRepository(TimeSeriesRepository):
+    """外部API経由での時系列データ取得"""
 
     def __init__(self, config: Config):
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-    def fetch_data(
-        self,
-    ) -> Tuple[List[SensorSchema], Dict[str, List[Optional[MeasurementPoint]]]]:
+    def fetch_time_series_data(self) -> Tuple[List[SensorSchema], Dict[str, List[Optional[MeasurementPoint]]]]:
         """APIから時系列データとスキーマを取得"""
         url = self._build_api_url()
         headers = {"Authorization": f"Basic {self.config.authorization}"}

@@ -4,7 +4,9 @@ import json
 import logging
 
 from src.config import Config
-from src.api_client import TimeSeriesAPIClient
+from src.repositories.time_series_repository import APITimeSeriesRepository
+from src.repositories.storage_repository import CloudStorageRepository
+from src.services.time_series_service import TimeSeriesService
 
 
 # ログ設定 - Cloud Runの標準出力対応
@@ -70,13 +72,35 @@ def fetch_timeseries_data(request):
         # 設定読み込みと検証
         logger.info("設定読み込み中...")
         config = Config.from_environment()
-        config.validate()
+        
+        # 設定検証
+        validation_error = _validate_config(config)
+        if validation_error:
+            return _create_error_response(validation_error, 400, headers, request_start_time, logger)
+        
         logger.info("設定検証完了")
 
-        # API クライアント作成
-        logger.info("時系列データ取得開始")
-        api_client = TimeSeriesAPIClient(config)
-        schemas, timeseries_data = api_client.fetch_data()
+        # 依存関係の構築
+        time_series_repository = APITimeSeriesRepository(config)
+        
+        # Cloud Storage設定があれば有効化
+        storage_repository = None
+        bucket_name = config.get_env_var("GCS_BUCKET_NAME")
+        if bucket_name:
+            storage_repository = CloudStorageRepository(bucket_name)
+            logger.info(f"Cloud Storage連携有効: {bucket_name}")
+        else:
+            logger.info("GCS_BUCKET_NAME が設定されていないため、CSV格納をスキップします")
+
+        # サービスの作成
+        time_series_service = TimeSeriesService(
+            time_series_repository=time_series_repository,
+            storage_repository=storage_repository
+        )
+
+        # 時系列データ処理
+        logger.info("時系列データ処理開始")
+        result = time_series_service.process_time_series_data()
 
         # 成功レスポンス
         request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
@@ -88,58 +112,58 @@ def fetch_timeseries_data(request):
             "message": "時系列データの取得が完了しました",
             "status": "success",
             "processing_time_seconds": round(request_elapsed, 2),
-            "data_summary": {
-                "sensor_count": len(schemas),
-                "timestamp_count": len(timeseries_data),
-                "sensors": [
-                    {"name": schema.name, "unit": schema.unit, "type": schema.type}
-                    for schema in schemas[:10]  # 最初の10個のセンサー情報
-                ],
-            },
+            **result
         }
-
-        # データが存在する場合は、サンプルデータも含める
-        if timeseries_data:
-            first_timestamp = list(timeseries_data.keys())[0]
-            sample_measurements = timeseries_data[first_timestamp]
-
-            response_data["sample_data"] = {
-                "timestamp": first_timestamp,
-                "measurements": [
-                    {
-                        "min": measurement.min_value if measurement else None,
-                        "max": measurement.max_value if measurement else None,
-                    }
-                    for measurement in sample_measurements[:5]  # 最初の5個の計測値
-                ],
-            }
 
         return (json.dumps(response_data, ensure_ascii=False), 200, headers)
 
     except ValueError as e:
         # 設定エラー（400 Bad Request）
-        request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
-        logger.error(f"========== 設定エラー ==========")
-        logger.error(f"設定検証失敗: {e}")
-        logger.error(f"リクエスト時間: {request_elapsed:.2f}秒")
-
-        error_response = {
-            "message": f"設定エラー: {str(e)}",
-            "status": "error",
-            "error_type": "configuration_error",
-        }
-        return (json.dumps(error_response, ensure_ascii=False), 400, headers)
+        return _create_error_response(
+            f"設定エラー: {str(e)}", 
+            400, 
+            headers, 
+            request_start_time, 
+            logger,
+            "configuration_error"
+        )
 
     except Exception as e:
         # その他のエラー（500 Internal Server Error）
-        request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
-        logger.error(f"========== Cloud Function エラー ==========")
-        logger.error(f"予期しないエラー: {type(e).__name__}: {e}")
-        logger.error(f"リクエスト時間: {request_elapsed:.2f}秒")
+        return _create_error_response(
+            f"内部エラーが発生しました: {str(e)}", 
+            500, 
+            headers, 
+            request_start_time, 
+            logger,
+            "internal_error"
+        )
 
-        error_response = {
-            "message": f"内部エラーが発生しました: {str(e)}",
-            "status": "error",
-            "error_type": "internal_error",
-        }
-        return (json.dumps(error_response, ensure_ascii=False), 500, headers)
+
+def _validate_config(config: Config) -> str:
+    """設定の検証"""
+    try:
+        config.validate()
+        return None
+    except ValueError as e:
+        return str(e)
+
+
+def _create_error_response(message: str, status_code: int, headers: dict, request_start_time: datetime.datetime, logger, error_type: str = "error"):
+    """エラーレスポンスを作成"""
+    request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
+    
+    log_level = "error" if status_code >= 500 else "warning"
+    log_message = f"========== Cloud Function エラー =========="
+    
+    getattr(logger, log_level)(log_message)
+    getattr(logger, log_level)(f"エラー: {message}")
+    getattr(logger, log_level)(f"リクエスト時間: {request_elapsed:.2f}秒")
+
+    error_response = {
+        "message": message,
+        "status": "error",
+        "error_type": error_type,
+    }
+    
+    return (json.dumps(error_response, ensure_ascii=False), status_code, headers)
