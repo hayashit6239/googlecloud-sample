@@ -3,7 +3,7 @@
 # Cloud Functions デプロイスクリプト
 
 # 変数設定
-PREFIX="hayashi"
+PREFIX=""
 
 # PREFIXバリデーション
 if [ -z "$PREFIX" ]; then
