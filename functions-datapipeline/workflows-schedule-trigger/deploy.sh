@@ -4,7 +4,7 @@
 # 時系列データ取得処理の定期実行ワークフローをデプロイ
 
 # 変数設定
-PREFIX=""
+PREFIX="hayashi"
 
 # PREFIXバリデーション
 if [ -z "$PREFIX" ]; then
