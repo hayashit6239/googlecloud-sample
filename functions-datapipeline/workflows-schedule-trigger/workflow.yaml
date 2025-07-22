@@ -24,6 +24,8 @@ main:
           args:
             url: ${function_url}
             timeout: 600
+            auth:
+              type: OIDC
           result: function_response
         except:
           as: e
@@ -46,6 +48,8 @@ main:
                   args:
                     url: ${function_url}
                     timeout: 600
+                    auth:
+                      type: OIDC
                   result: function_response
                 except:
                   as: retry_error

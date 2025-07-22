@@ -61,10 +61,31 @@ gcloud workflows execute hayashi-timeseries-data-workflow --location=asia-northe
 
 ## ワークフローの特徴
 
+### セキュリティ（認証）
+
+Cloud Run functions で「Require authentication」を有効にしている場合に対応：
+
+- **OIDC認証**: HTTP呼び出しに `auth: type: OIDC` を設定
+- **自動トークン取得**: ワークフロー実行時にサービスアカウントのIDトークン（OIDC JWT）を自動取得
+- **認証ヘッダー追加**: HTTPリクエストに `Authorization: Bearer <ID_TOKEN>` ヘッダーを自動付与
+
+**認証フロー:**
+```
+1. Workflows → GCP Identity Service: IDトークン取得
+2. Workflows → Cloud Run functions: Authorization ヘッダー付きHTTP呼び出し
+3. Cloud Run functions: トークンの署名・有効期限・発行者を検証
+4. 認証成功 → 関数実行 / 認証失敗 → 403 Forbidden
+```
+
+**必要な権限:**
+- `roles/cloudfunctions.invoker`: Cloud Functions 呼び出し権限
+- `roles/run.invoker`: Cloud Run 呼び出し権限（Gen2 functions用）
+- `roles/logging.logWriter`: ログ出力権限
+
 ### リトライ機能
 
-- 最大 3 回までリトライを実行
-- 失敗時は段階的に待機時間を延長 (30 秒 → 60 秒 → 90 秒)
+- 最大 2 回までリトライを実行（初回 + リトライ1回）
+- 失敗時は30秒待機後にリトライ
 
 ### ログ出力
 
@@ -76,6 +97,7 @@ gcloud workflows execute hayashi-timeseries-data-workflow --location=asia-northe
 
 - HTTP エラーレスポンスの処理
 - 通信エラーの処理
+- 認証エラー（403 Forbidden）の処理
 - 最大試行回数達成時の処理
 
 ## 監視

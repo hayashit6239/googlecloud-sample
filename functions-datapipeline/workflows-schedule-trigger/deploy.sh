@@ -4,7 +4,7 @@
 # 時系列データ取得処理の定期実行ワークフローをデプロイ
 
 # 変数設定
-PREFIX="hayashi"
+PREFIX=""
 
 # PREFIXバリデーション
 if [ -z "$PREFIX" ]; then
@@ -42,10 +42,30 @@ if ! gcloud iam service-accounts describe $SERVICE_ACCOUNT_EMAIL --quiet 2>/dev/
         --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
         --role="roles/logging.logWriter"
     
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+        --role="roles/run.invoker"
+    
     echo "サービスアカウントの作成と権限付与が完了しました"
 else
     echo "サービスアカウントが既に存在します"
 fi
+
+# workflow.yaml内のprefix値をチェック
+echo "workflow.yaml内のprefix設定を確認中..."
+YAML_PREFIX=$(grep -E "^\s*-\s*prefix:\s*" workflow.yaml | sed -E 's/.*prefix:\s*"([^"]*)".*/\1/')
+
+if [ -z "$YAML_PREFIX" ]; then
+    echo "エラー: workflow.yaml内のprefix変数が空または見つかりません。"
+    echo "workflow.yamlファイルの以下の行を修正してください:"
+    echo "  - prefix: \"your-identifier\"  # 例: prefix: \"hayashi\""
+    echo ""
+    echo "現在の設定:"
+    grep -n -E "^\s*-\s*prefix:" workflow.yaml || echo "  prefix設定が見つかりません"
+    exit 1
+fi
+
+echo "workflow.yaml内prefix設定: $YAML_PREFIX"
 
 # ワークフローのデプロイ
 echo "ワークフローをデプロイ中..."
@@ -55,26 +75,33 @@ gcloud workflows deploy $WORKFLOW_NAME \
     --service-account=$SERVICE_ACCOUNT_EMAIL
 
 if [ $? -eq 0 ]; then
-    echo "=== デプロイ成功 ==="
+    echo "=== ワークフローデプロイ成功 ==="
     echo "ワークフロー情報:"
     gcloud workflows describe $WORKFLOW_NAME --location=$REGION
     
     echo ""
-    echo "=== Cloud Scheduler の設定 ==="
-    echo "定期実行を設定するには、以下のコマンドを実行してください:"
-    echo ""
-    echo "# 毎日午前9時に実行 (JST)"
-    echo "gcloud scheduler jobs create http ${WORKFLOW_NAME}-schedule \\"
-    echo "  --schedule=\"0 9 * * *\" \\"
-    echo "  --time-zone=\"Asia/Tokyo\" \\"
-    echo "  --uri=\"https://workflowexecutions.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/workflows/${WORKFLOW_NAME}/executions\" \\"
-    echo "  --http-method=POST \\"
-    echo "  --oauth-service-account-email=\"$SERVICE_ACCOUNT_EMAIL\" \\"
-    echo "  --headers=\"Content-Type=application/json\" \\"
-    echo "  --message-body='{}'"
-    echo ""
-    echo "# 手動実行テスト"
-    echo "gcloud workflows execute $WORKFLOW_NAME --location=$REGION"
+    echo "=== Cloud Scheduler の自動設定 ==="
+    echo "毎日12:00に実行するスケジューラーを設定します..."
+    
+    # Cloud Scheduler の設定
+    ./schedule.sh
+    
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "=== 全体のデプロイ成功 ==="
+        echo "ワークフローとスケジューラーの設定が完了しました。"
+        echo ""
+        echo "手動実行テスト:"
+        echo "gcloud workflows execute $WORKFLOW_NAME --location=$REGION"
+        echo ""
+        echo "スケジューラー手動実行:"
+        echo "gcloud scheduler jobs run ${WORKFLOW_NAME}-daily-schedule --location=$REGION"
+    else
+        echo ""
+        echo "=== スケジューラー設定失敗 ==="
+        echo "ワークフローのデプロイは成功しましたが、スケジューラーの設定に失敗しました。"
+        echo "手動で ./schedule.sh を実行してください。"
+    fi
     
 else
     echo "=== デプロイ失敗 ==="
