@@ -43,6 +43,12 @@ if ! gcloud iam service-accounts describe $SERVICE_ACCOUNT_EMAIL --quiet 2>/dev/
     exit 1
 fi
 
+# サービスアカウントにWorkflows実行権限を付与
+echo "サービスアカウントにWorkflows実行権限を付与中..."
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/workflows.invoker"
+
 # 既存のスケジューラージョブの確認と削除
 echo "既存のスケジューラージョブを確認中..."
 if gcloud scheduler jobs describe $SCHEDULER_JOB_NAME --location=$REGION --quiet 2>/dev/null; then

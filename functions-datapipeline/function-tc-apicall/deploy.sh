@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Cloud Functions デプロイスクリプト
+# Cloud Run functions デプロイスクリプト
 
 # 変数設定
-PREFIX=""
+PREFIX="hayashi"
 
 # PREFIXバリデーション
 if [ -z "$PREFIX" ]; then
@@ -18,11 +18,48 @@ REGION="asia-northeast1"  # 東京リージョン
 RUNTIME="python311"
 MEMORY="512MB"
 TIMEOUT="540s"
+PROJECT_ID=$(gcloud config get-value project)
+SERVICE_ACCOUNT_NAME="${PREFIX}-functions-sa"
+SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "=== Cloud Function デプロイ開始 ==="
+echo "=== Cloud Run function デプロイ開始 ==="
 echo "関数名: $FUNCTION_NAME"
 echo "リージョン: $REGION"
 echo "ランタイム: $RUNTIME"
+echo "サービスアカウント: $SERVICE_ACCOUNT_EMAIL"
+
+# サービスアカウントの存在確認と作成
+echo "サービスアカウントの確認..."
+if ! gcloud iam service-accounts describe $SERVICE_ACCOUNT_EMAIL --quiet 2>/dev/null; then
+    echo "サービスアカウントが存在しません。作成します..."
+    gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME \
+        --display-name="Cloud Functions Service Account" \
+        --description="Service account for Cloud Functions execution"
+    
+    if [ $? -ne 0 ]; then
+        echo "エラー: サービスアカウントの作成に失敗しました"
+        exit 1
+    fi
+else
+    echo "サービスアカウントが既に存在します"
+fi
+
+# 必要な権限を付与
+echo "必要な権限を付与中..."
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/secretmanager.secretAccessor" \
+    --quiet
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/storage.objectAdmin" \
+    --quiet
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/logging.logWriter" \
+    --quiet
 
 # デプロイ実行
 gcloud functions deploy $FUNCTION_NAME \
@@ -35,7 +72,9 @@ gcloud functions deploy $FUNCTION_NAME \
   --allow-unauthenticated \
   --memory=$MEMORY \
   --timeout=$TIMEOUT \
-  --env-vars-file=.local.env.yaml
+  --service-account=$SERVICE_ACCOUNT_EMAIL \
+  --env-vars-file=.local.env.yaml \
+  --set-secrets="AUTHORIZATION=${PREFIX}_DATAPIPELINE_AUTHORIZATION:latest"
 
 if [ $? -eq 0 ]; then
     echo "=== デプロイ成功 ==="
