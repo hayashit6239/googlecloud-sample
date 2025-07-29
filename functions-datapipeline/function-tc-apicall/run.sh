@@ -8,6 +8,7 @@ echo "=== Cloud Functions ローカル実行 ==="
 export TENANT_DOMAIN=""
 export AUTHORIZATION=""
 export SOURCE=""
+export GCS_BUCKET_NAME=""
 
 # Functions Framework でローカル実行
 echo "ローカルサーバーを起動中..."
