@@ -11,6 +11,7 @@ class InferenceService:
     """推論処理とBigQuery挿入を管理するサービス"""
 
     def __init__(self, bigquery_repository: BigQueryRepository):
+        self.nodeai_api_key = ""
         self.bigquery_repository = bigquery_repository
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -28,8 +29,7 @@ class InferenceService:
 
             # 推論結果オブジェクトを作成
             result = InferenceResult(
-                timestamp=current_time,
-                inference_value=inference_value
+                timestamp=current_time, inference_value=inference_value
             )
 
             self.logger.info(f"推論結果を生成しました: {inference_value:.4f}")
@@ -42,14 +42,14 @@ class InferenceService:
                 return {
                     "inference_value": inference_value,
                     "timestamp": current_time.isoformat(),
-                    "bigquery_insert": "success"
+                    "bigquery_insert": "success",
                 }
             else:
                 self.logger.error("BigQueryへの挿入に失敗しました")
                 return {
                     "inference_value": inference_value,
                     "timestamp": current_time.isoformat(),
-                    "bigquery_insert": "failed"
+                    "bigquery_insert": "failed",
                 }
 
         except Exception as e:
@@ -60,3 +60,21 @@ class InferenceService:
         """ランダムな推論値を生成"""
         # 0.0から1.0の間のランダムな値を生成
         return random.uniform(0.0, 1.0)
+
+    def _create_request_headers(self) -> Dict[str, str]:
+        """NodeAI APIのリクエストヘッダー作成"""
+        self.logger.info("NodeAI APIのリクエストヘッダー作成")
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.nodeai_api_key}",
+                "Content-Type": "application/json",
+            }
+        except ValueError as e:
+            self.logger.error(f"APIキーを認識できません: {e}")
+            raise e
+
+        self.logger.info("リクエストヘッダー作成完了")
+        self.logger.debug(f"リクエストヘッダー: {headers}")
+
+        return headers
