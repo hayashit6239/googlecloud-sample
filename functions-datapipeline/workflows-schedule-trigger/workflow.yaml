@@ -82,12 +82,24 @@ main:
                       status_code: ${function_response.code}
                       response_summary: ${function_response.body}
 
-              - return_success:
-                  return:
-                    status: "SUCCESS"
-                    message: "時系列データ取得完了"
-                    response: ${function_response.body}
-                    timestamp: ${time.format(sys.now())}
+              - call_function_inf:
+                  try:
+                    call: http.get
+                    args:
+                      url: ${function_url_inf}
+                      timeout: 600
+                      auth:
+                        type: OIDC
+                    result: function_response
+                  except:
+                    as: e
+                    steps:
+                      - log_error_inf:
+                          call: sys.log
+                          args:
+                            data:
+                              message: "Cloud Function呼び出しエラー"
+                              error: ${e}
 
           - condition: true
             steps:
@@ -103,30 +115,3 @@ main:
                     status: "FAILED"
                     message: "HTTP エラーのため処理を終了"
                     status_code: ${function_response.code}
-
-    - log_start_inf:
-        call: sys.log
-        args:
-          data:
-            message: "時系列データ取得ワークフロー開始"
-            function_url: ${function_url_inf}
-            timestamp: ${time.format(sys.now())}
-
-    - call_function_inf:
-        try:
-          call: http.get
-          args:
-            url: ${function_url_inf}
-            timeout: 600
-            auth:
-              type: OIDC
-          result: function_response
-        except:
-          as: e
-          steps:
-            - log_error_inf:
-                call: sys.log
-                args:
-                  data:
-                    message: "Cloud Function呼び出しエラー"
-                    error: ${e}
