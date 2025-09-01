@@ -17,6 +17,10 @@ class Config:
     csv_file_path: str
     threshold: float
     tc_data_delay_minutes: int
+    
+    # Cloud Storage設定
+    gcs_bucket_name: str
+    gcs_file_name: str
 
     @classmethod
     def from_environment(cls) -> "Config":
@@ -31,6 +35,8 @@ class Config:
             csv_file_path=os.environ.get("CSV_FILE_PATH", ""),
             threshold=float(os.environ.get("THRESHOLD", "1.0")),
             tc_data_delay_minutes=int(os.environ.get("TC_DATA_DELAY_MINUTES", "5")),
+            gcs_bucket_name=os.environ.get("GCS_BUCKET_NAME", ""),
+            gcs_file_name=os.environ.get("GCS_FILE_NAME", ""),
         )
 
     def validate(self) -> None:
@@ -49,6 +55,9 @@ class Config:
             raise ValueError("NODEAI_BASE_URL環境変数が設定されていません")
         if not self.csv_file_path:
             raise ValueError("CSV_FILE_PATH環境変数が設定されていません")
+        if not self.gcs_bucket_name:
+            raise ValueError("GCS_BUCKET_NAME環境変数が設定されていません")
+        # GCS_FILE_NAMEは空でも可（空の場合はtimeseries_dataプレフィックスで最新ファイルを検索）
     
     def get_env_var(self, key: str) -> str:
         """環境変数を取得"""

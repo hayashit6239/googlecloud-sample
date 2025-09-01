@@ -5,6 +5,8 @@ import logging
 
 from src.config import Config
 from src.repositories.bigquery_repository import BigQueryRepository
+from src.repositories.nodeai_repository import NodeaiRepository
+from src.repositories.cloud_storage_repository import CloudStorageRepository
 from src.services.inference_service import InferenceService
 
 
@@ -43,7 +45,8 @@ setup_logging()
 def insert_inference_result(request):
     """推論結果をBigQueryに挿入するCloud Function"""
     logger = logging.getLogger(f"{__name__}.insert_inference_result")
-    request_start_time = datetime.datetime.now()
+    jst = datetime.timezone(datetime.timedelta(hours=9))
+    request_start_time = datetime.datetime.now(jst)
 
     # リクエスト情報をログ出力
     logger.info("========== Cloud Run function 開始 ==========")
@@ -80,16 +83,22 @@ def insert_inference_result(request):
 
         # 依存関係の構築
         bigquery_repository = BigQueryRepository(config)
+        nodeai_repository = NodeaiRepository(config)
+        cloud_storage_repository = CloudStorageRepository(config)
         
         # サービスの作成
-        inference_service = InferenceService(bigquery_repository=bigquery_repository)
+        inference_service = InferenceService(
+            bigquery_repository=bigquery_repository,
+            nodeai_repository=nodeai_repository,
+            cloud_storage_repository=cloud_storage_repository
+        )
 
         # 推論処理とBigQuery挿入
         logger.info("推論処理とBigQuery挿入を開始")
         result = inference_service.process_inference()
 
         # 成功レスポンス
-        request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
+        request_elapsed = (datetime.datetime.now(jst) - request_start_time).total_seconds()
         logger.info(f"========== Cloud Function 成功 ==========")
         logger.info(f"総リクエスト時間: {request_elapsed:.2f}秒")
 
@@ -137,7 +146,8 @@ def _validate_config(config: Config) -> str:
 
 def _create_error_response(message: str, status_code: int, headers: dict, request_start_time: datetime.datetime, logger, error_type: str = "error"):
     """エラーレスポンスを作成"""
-    request_elapsed = (datetime.datetime.now() - request_start_time).total_seconds()
+    jst = datetime.timezone(datetime.timedelta(hours=9))
+    request_elapsed = (datetime.datetime.now(jst) - request_start_time).total_seconds()
     
     log_level = "error" if status_code >= 500 else "warning"
     log_message = f"========== Cloud Function エラー =========="
