@@ -13,7 +13,12 @@ from ..schemas import NodeAIApiResponse
 class InferenceService:
     """推論処理とBigQuery挿入を管理するサービス"""
 
-    def __init__(self, bigquery_repository: BigQueryRepository, nodeai_repository: NodeaiRepository, cloud_storage_repository: CloudStorageRepository):
+    def __init__(
+        self,
+        bigquery_repository: BigQueryRepository,
+        nodeai_repository: NodeaiRepository,
+        cloud_storage_repository: CloudStorageRepository,
+    ):
         self.bigquery_repository = bigquery_repository
         self.nodeai_repository = nodeai_repository
         self.cloud_storage_repository = cloud_storage_repository
@@ -30,7 +35,7 @@ class InferenceService:
             )
             if not csv_ready:
                 raise Exception("CSVファイルの準備に失敗しました")
-            
+
             # テーブルの存在確認と作成
             self.bigquery_repository.ensure_table_exists()
 
@@ -44,7 +49,7 @@ class InferenceService:
             result = InferenceResult(
                 timestamp=current_time, inference_value=inference_value
             )
-
+            self.logger.info(current_time)
             self.logger.info(f"推論結果を生成しました: {inference_value:.4f}")
 
             # BigQueryに挿入
@@ -68,6 +73,3 @@ class InferenceService:
         except Exception as e:
             self.logger.error(f"推論処理中にエラーが発生: {str(e)}")
             raise
-    
-
-

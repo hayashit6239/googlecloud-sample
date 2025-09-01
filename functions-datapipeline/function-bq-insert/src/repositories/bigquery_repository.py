@@ -28,8 +28,10 @@ class BigQueryRepository:
 
     def _create_table(self) -> None:
         """推論結果テーブルを作成"""
-        dataset_ref = self.client.dataset(self.config.dataset_id, project=self.config.project_id)
-        
+        dataset_ref = self.client.dataset(
+            self.config.dataset_id, project=self.config.project_id
+        )
+
         # データセットが存在しない場合は作成
         try:
             self.client.get_dataset(dataset_ref)
@@ -47,13 +49,12 @@ class BigQueryRepository:
 
         table_ref = dataset_ref.table(self.config.table_id)
         table = bigquery.Table(table_ref, schema=schema)
-        
+
         # パーティション設定（日付ベース）
         table.time_partitioning = bigquery.TimePartitioning(
-            type_=bigquery.TimePartitioningType.DAY,
-            field="timestamp"
+            type_=bigquery.TimePartitioningType.DAY, field="timestamp"
         )
-        
+
         table = self.client.create_table(table)
         self.logger.info(f"テーブル {table.table_id} を作成しました")
 
@@ -70,14 +71,13 @@ class BigQueryRepository:
         try:
             # BigQueryに挿入するためのデータを準備
             rows_to_insert = [result.to_dict() for result in results]
-            
             table = self.client.get_table(self.table_ref)
             errors = self.client.insert_rows_json(table, rows_to_insert)
 
             if errors:
                 self.logger.error(f"BigQuery挿入エラー: {errors}")
                 return False
-            
+
             self.logger.info(f"{len(results)}件のデータを正常に挿入しました")
             return True
 
