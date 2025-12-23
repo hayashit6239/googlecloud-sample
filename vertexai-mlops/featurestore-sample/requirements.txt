@@ -1,0 +1,22 @@
+# Vertex AI Feature Store - Feature Monitoring Sample Dependencies
+# Requires Python 3.11+
+
+# Google Cloud SDKs
+google-cloud-aiplatform>=1.60.0
+google-cloud-bigquery>=3.25.0
+google-auth>=2.29.0
+
+# Data processing
+pandas>=2.2.0
+numpy>=1.26.0
+pyarrow>=15.0.0  # Required for BigQuery pandas integration
+db-dtypes>=1.2.0  # Required for BigQuery to_dataframe()
+
+# Configuration
+pyyaml>=6.0.1
+
+# HTTP requests (for REST API calls)
+requests>=2.31.0
+
+# Utilities
+python-dateutil>=2.9.0

@@ -1,0 +1,51 @@
+# Vertex AI Feature Store - Feature Monitoring Sample Configuration
+# このファイルを環境に合わせて編集してください
+
+# Google Cloud Project Settings
+project_id: "your-project-id" # あなたのプロジェクトIDに置き換えてください
+location: "asia-northeast1" # リージョン
+
+# BigQuery Settings
+bigquery:
+  dataset_id: "feature_store_sample"
+  table_id: "user_features"
+
+# Feature Store Settings
+feature_store:
+  feature_group_name: "user_feature_group"
+  features:
+    - name: "age"
+      type: "INT64"
+      drift_threshold: 0.3
+    - name: "income"
+      type: "FLOAT64"
+      drift_threshold: 0.3
+    - name: "category"
+      type: "STRING"
+      drift_threshold: 0.3
+
+# Feature Monitor Settings
+feature_monitor:
+  name: "user_feature_monitor"
+  # cron schedule: 毎日午前9時に実行（手動実行も可能）
+  cron_schedule: "0 9 * * *"
+
+# Sample Data Settings
+sample_data:
+  num_records: 100
+  # 初期データの分布設定
+  initial:
+    age_mean: 35
+    age_std: 10
+    income_mean: 60000
+    income_std: 20000
+    categories: ["A", "B", "C"]
+    category_weights: [0.5, 0.3, 0.2]
+  # ドリフト後のデータ分布設定
+  drifted:
+    age_mean: 45 # 平均年齢が上昇
+    age_std: 15
+    income_mean: 80000 # 平均収入が上昇
+    income_std: 30000
+    categories: ["A", "B", "C", "D"] # 新カテゴリ追加
+    category_weights: [0.2, 0.2, 0.3, 0.3] # 分布が変化
