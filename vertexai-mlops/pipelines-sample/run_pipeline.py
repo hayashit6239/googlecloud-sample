@@ -17,10 +17,26 @@ from google.cloud import aiplatform
 
 
 def load_config() -> dict[str, Any]:
-    """設定ファイルを読み込む"""
-    config_path = Path(__file__).parent / "config" / "config.yaml"
+    """設定ファイルを読み込む（vertexai-mlops/config.yaml から pipelines セクションを取得）"""
+    config_path = Path(__file__).parent.parent / "config.yaml"
     with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        root_config = yaml.safe_load(f)
+
+    # pipelines セクションを展開してフラットな構造に変換
+    pipelines_config = root_config.get("pipelines", {})
+    return {
+        "project_id": root_config["project_id"],
+        "location": root_config["location"],
+        "pipeline": {
+            "name": pipelines_config.get("name", "ml-training-pipeline"),
+            "pipeline_root": root_config["gcs"]["pipeline_root"],
+            "staging_bucket": root_config["gcs"]["staging_bucket"],
+        },
+        "data": pipelines_config.get("data", {}),
+        "training": pipelines_config.get("training", {}),
+        "execution": pipelines_config.get("execution", {}),
+        "experiments": root_config.get("experiments", {}),
+    }
 
 
 def run_simple_pipeline(
@@ -128,12 +144,12 @@ def main():
     parser.add_argument(
         "--experiment",
         action="store_true",
-        help="Vertex AI Experiments との連携を有効にする（config.yaml の設定を上書き）",
+        help="Vertex AI Experiments との連携を有効にする",
     )
     parser.add_argument(
         "--no-experiment",
         action="store_true",
-        help="Vertex AI Experiments との連携を無効にする（config.yaml の設定を上書き）",
+        help="Vertex AI Experiments との連携を無効にする",
     )
     args = parser.parse_args()
 
@@ -147,7 +163,7 @@ def main():
     location = config["location"]
 
     if project_id == "your-project-id":
-        print("❌ エラー: config/config.yaml の project_id を設定してください")
+        print("❌ エラー: vertexai-mlops/config.yaml の project_id を設定してください")
         sys.exit(1)
 
     # Experiments 設定を判定
@@ -157,9 +173,10 @@ def main():
     elif args.no_experiment:
         use_experiments = False
     else:
-        use_experiments = experiments_config.get("enabled", False)
+        # デフォルトは無効（--experiment フラグで有効化）
+        use_experiments = False
 
-    experiment_name = experiments_config.get("experiment_name", "ml-training-experiment")
+    experiment_name = experiments_config.get("pipeline_experiment_name", "ml-training-experiment")
 
     print(f"\nプロジェクト: {project_id}")
     print(f"リージョン: {location}")

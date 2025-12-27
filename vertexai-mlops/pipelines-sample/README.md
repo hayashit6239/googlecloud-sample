@@ -12,21 +12,21 @@ Kubeflow Pipelines SDK (KFP) を使用した Vertex AI Pipelines のサンプル
 ## ディレクトリ構成
 
 ```
-pipeline-sample/
-├── README.md
-├── requirements.txt
-├── config/
-│   └── config.yaml          # 設定ファイル
-├── components/
-│   ├── __init__.py
-│   ├── data_components.py   # データ処理コンポーネント
-│   └── training_components.py # トレーニングコンポーネント
-├── pipelines/
-│   ├── __init__.py
-│   └── training_pipeline.py # パイプライン定義
-├── compiled/                 # コンパイル済み YAML（自動生成）
-├── compile_pipeline.py       # コンパイルスクリプト
-└── run_pipeline.py           # 実行スクリプト
+vertexai-mlops/
+├── config.yaml               # 共通設定ファイル
+└── pipelines-sample/
+    ├── README.md
+    ├── requirements.txt
+    ├── components/
+    │   ├── __init__.py
+    │   ├── data_components.py   # データ処理コンポーネント
+    │   └── training_components.py # トレーニングコンポーネント
+    ├── pipelines/
+    │   ├── __init__.py
+    │   └── training_pipeline.py # パイプライン定義
+    ├── compiled/                 # コンパイル済み YAML（自動生成）
+    ├── compile_pipeline.py       # コンパイルスクリプト
+    └── run_pipeline.py           # 実行スクリプト
 ```
 
 ## セットアップ
@@ -40,14 +40,22 @@ pip install -r requirements.txt
 
 ### 2. 設定ファイルの編集
 
-`config/config.yaml` を編集して、プロジェクト ID やバケット名を設定します：
+親ディレクトリの `vertexai-mlops/config.yaml` を編集して、プロジェクト ID やバケット名を設定します：
 
 ```yaml
 project_id: "your-project-id"
 location: "asia-northeast1"
-pipeline:
-  pipeline_root: "gs://your-bucket/pipeline-root"
-  staging_bucket: "gs://your-bucket/staging"
+
+gcs:
+  bucket: "your-bucket-name"
+  pipeline_root: "gs://your-bucket-name/pipeline-root"
+  staging_bucket: "gs://your-bucket-name/staging"
+
+pipelines:
+  name: "ml-training-pipeline"
+  data:
+    source_table: "your-project-id.feature_store_sample.user_features"
+    # ...
 ```
 
 ### 3. 認証

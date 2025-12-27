@@ -1,0 +1,5 @@
+"""Feature Store サンプル用ユーティリティ"""
+
+from .config import load_config
+
+__all__ = ["load_config"]

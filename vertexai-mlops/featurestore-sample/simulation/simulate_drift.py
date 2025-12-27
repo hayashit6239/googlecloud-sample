@@ -18,15 +18,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import yaml
 from google.cloud import bigquery
 
-
-def load_config() -> dict[str, Any]:
-    """設定ファイルを読み込む"""
-    config_path = Path(__file__).parent.parent / "config" / "config.yaml"
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+# 共通ユーティリティからインポート
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.config import load_config
 
 
 def generate_drifted_data(config: dict[str, Any]) -> pd.DataFrame:
@@ -163,7 +159,7 @@ def main():
     table_id = config["bigquery"]["table_id"]
 
     if project_id == "your-project-id":
-        print("❌ エラー: config/config.yaml の project_id を設定してください")
+        print("❌ エラー: vertexai-mlops/config.yaml の project_id を設定してください")
         sys.exit(1)
 
     print(f"\nプロジェクト: {project_id}")

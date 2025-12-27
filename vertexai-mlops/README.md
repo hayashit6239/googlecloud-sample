@@ -86,12 +86,45 @@ flowchart TB
 |---------|------|
 | **[Ray on Vertex AI](https://cloud.google.com/vertex-ai/docs/open-source/ray-on-vertex-ai)** | AI と Python アプリケーションをスケーリングするための Ray フレームワークを Vertex AI 上で実行。分散コンピューティングと並列処理を実現。 |
 
+## セットアップ
+
+### 1. 設定ファイルの作成
+
+テンプレートから設定ファイルを作成します：
+
+```bash
+cd vertexai-mlops
+cp config.yaml.template config.yaml
+```
+
+### 2. 設定ファイルの編集
+
+`config.yaml` を編集し、プロジェクト ID とバケット名を設定します：
+
+```yaml
+project_id: "your-actual-project-id"
+location: "asia-northeast1"
+
+gcs:
+  bucket: "your-actual-bucket-name"
+  pipeline_root: "gs://your-actual-bucket-name/pipeline-root"
+  staging_bucket: "gs://your-actual-bucket-name/staging"
+```
+
+### 3. 認証
+
+```bash
+gcloud auth application-default login
+```
+
 ## サンプルコード
 
 このリポジトリでは、上記の Vertex AI MLOps サービスについて、実践的なサンプルコードを提供しています。
 
 | ディレクトリ | 対象サービス | 説明 |
 |-------------|-------------|------|
+| [pipelines-sample/](./pipelines-sample/) | Vertex AI Pipelines | KFP SDK を使用した ML パイプラインのサンプル |
+| [experiments-sample/](./experiments-sample/) | Vertex AI Experiments | 実験追跡とメトリクス記録のサンプル |
 | [featurestore-sample/](./featurestore-sample/) | Vertex AI Feature Store | Feature Monitoring によるドリフト検出のサンプル |
 
 ## 参考リンク

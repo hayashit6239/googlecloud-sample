@@ -18,17 +18,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-import yaml
 from google.api_core import exceptions
 from google.cloud import aiplatform, bigquery
 from vertexai.resources.preview import feature_store
 
-
-def load_config() -> dict[str, Any]:
-    """設定ファイルを読み込む"""
-    config_path = Path(__file__).parent.parent / "config" / "config.yaml"
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+# 共通ユーティリティからインポート
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.config import load_config
 
 
 def get_feature_group(
@@ -180,7 +176,7 @@ def main():
     monitor_name = config["feature_monitor"]["name"]
 
     if project_id == "your-project-id":
-        print("❌ エラー: config/config.yaml の project_id を設定してください")
+        print("❌ エラー: vertexai-mlops/config.yaml の project_id を設定してください")
         sys.exit(1)
 
     print(f"\nプロジェクト: {project_id}")

@@ -1,0 +1,128 @@
+# =============================================================================
+# Vertex AI MLOps サンプル - 共通設定ファイル（テンプレート）
+# =============================================================================
+# 使用方法:
+#   1. このファイルを config.yaml にコピーしてください
+#      $ cp config.yaml.template config.yaml
+#   2. config.yaml を編集し、project_id とバケット名を設定してください
+#
+# 注意: config.yaml は .gitignore に登録されており、リポジトリには含まれません
+
+# -----------------------------------------------------------------------------
+# GCP プロジェクト設定（共通）
+# -----------------------------------------------------------------------------
+project_id: "your-project-id"
+location: "asia-northeast1"
+
+# GCS 設定（共通）
+gcs:
+  bucket: "your-bucket-name"
+  # 各サンプルのアーティファクト保存先
+  pipeline_root: "gs://your-bucket-name/pipeline-root"
+  staging_bucket: "gs://your-bucket-name/staging"
+  model_artifacts_path: "experiments/models"
+
+# -----------------------------------------------------------------------------
+# Feature Store サンプル設定
+# -----------------------------------------------------------------------------
+featurestore:
+  # BigQuery 設定
+  bigquery:
+    dataset_id: "feature_store_sample"
+    table_id: "user_features"
+
+  # Feature Store 設定
+  feature_group_name: "user_feature_group"
+  features:
+    - name: "age"
+      type: "INT64"
+      drift_threshold: 0.3
+    - name: "income"
+      type: "FLOAT64"
+      drift_threshold: 0.3
+    - name: "category"
+      type: "STRING"
+      drift_threshold: 0.3
+
+  # Feature Monitor 設定
+  feature_monitor:
+    name: "user_feature_monitor"
+    cron_schedule: "0 9 * * *"
+
+  # サンプルデータ設定
+  sample_data:
+    num_records: 100
+    initial:
+      age_mean: 35
+      age_std: 10
+      income_mean: 60000
+      income_std: 20000
+      categories: ["A", "B", "C"]
+      category_weights: [0.5, 0.3, 0.2]
+    drifted:
+      age_mean: 45
+      age_std: 15
+      income_mean: 80000
+      income_std: 30000
+      categories: ["A", "B", "C", "D"]
+      category_weights: [0.2, 0.2, 0.3, 0.3]
+
+# -----------------------------------------------------------------------------
+# Pipelines サンプル設定
+# -----------------------------------------------------------------------------
+pipelines:
+  # パイプライン設定
+  name: "ml-training-pipeline"
+
+  # データ設定
+  data:
+    source_table: "your-project-id.feature_store_sample.user_features"
+    feature_columns:
+      - "age"
+      - "income"
+    target_column: "category"
+    test_split_ratio: 0.2
+
+  # トレーニング設定
+  training:
+    model_type: "sklearn_random_forest"
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 10
+      random_state: 42
+
+  # 実行設定
+  execution:
+    enable_caching: true
+    service_account: ""
+
+# -----------------------------------------------------------------------------
+# Experiments サンプル設定
+# -----------------------------------------------------------------------------
+experiments:
+  # Experiment 設定
+  name: "sample-experiment"
+  description: "Vertex AI Experiments サンプル"
+
+  # パイプライン連携用
+  pipeline_experiment_name: "ml-training-experiment"
+
+  # データ設定（ローカル実行用）
+  data:
+    dataset: "iris"
+    test_size: 0.2
+    random_state: 42
+
+  # モデル設定
+  model:
+    random_forest:
+      n_estimators: 100
+      max_depth: 10
+      min_samples_split: 2
+      min_samples_leaf: 1
+      random_state: 42
+
+  # Tensorboard 設定（オプション）
+  tensorboard:
+    enabled: false
+    instance_name: ""
