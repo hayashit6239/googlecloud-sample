@@ -1,7 +1,10 @@
 # 機密情報を含む環境設定ファイル
-.env*.yaml
+.local.env.yaml
 .env*.yml
 *_local.sh
+
+# Vertex AI MLOps サンプル - 実際の設定ファイル（テンプレートからコピー）
+vertexai-mlops/config.yaml
 
 # システムファイル
 .DS_Store
@@ -64,3 +67,9 @@ logs/
 *.tmp
 *.temp
 .cache/
+
+# Docker関連
+*.dockerignore
+docker-compose.override.yml
+
+veretexai-mlops
